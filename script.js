@@ -22,6 +22,17 @@ const routeTime = document.getElementById("routeTime");
 
 let stops = [];
 let markers = [];
+let pendingRouteBuild = false;
+let mapLoaded = false;
+
+map.on("load", () => {
+  mapLoaded = true;
+  console.log("Map loaded");
+  if (pendingRouteBuild) {
+    pendingRouteBuild = false;
+    buildRoadRoute();
+  }
+});
 
 function escapeHtml(text) {
   return text.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -137,49 +148,59 @@ suggestionsEl.addEventListener("click", (e) => {
 
 async function buildRoadRoute() {
   if (stops.length < 2) return;
+  if (!mapLoaded) {
+    pendingRouteBuild = true;
+    return;
+  }
+
   const coords = stops.map(s => `${s.lng},${s.lat}`).join(";");
-  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&overview=full&steps=true&access_token=${mapboxgl.accessToken}`;
+  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&overview=full&access_token=${mapboxgl.accessToken}`;
+
   try {
     const res = await fetch(url);
     const data = await res.json();
-    const route = data.routes && data.routes[0];
-    if (!route) return;
 
+    if (!data.routes || !data.routes.length) {
+      alert("Маршрут не знайдено");
+      return;
+    }
+
+    const route = data.routes[0];
     const geojson = {
       type: "Feature",
-      properties: {},
       geometry: route.geometry
     };
 
-    if (map.getSource("route")) {
-      map.getSource("route").setData(geojson);
-    } else {
+    if (!map.getSource("route")) {
       map.addSource("route", {
         type: "geojson",
         data: geojson
       });
+
       map.addLayer({
         id: "route-line",
         type: "line",
         source: "route",
         paint: {
           "line-color": "#111827",
-          "line-width": 5,
-          "line-opacity": 0.9
+          "line-width": 5
         },
         layout: {
           "line-cap": "round",
           "line-join": "round"
         }
       });
+    } else {
+      map.getSource("route").setData(geojson);
     }
-
-    setRouteStats(route.distance, route.duration);
 
     const bounds = new mapboxgl.LngLatBounds();
     route.geometry.coordinates.forEach(c => bounds.extend(c));
-    map.fitBounds(bounds, {padding: 60});
+    map.fitBounds(bounds, { padding: 60 });
+
+    setRouteStats(route.distance, route.duration);
   } catch (e) {
+    console.error(e);
     searchStatus.textContent = "Не вдалось побудувати маршрут";
   }
 }
