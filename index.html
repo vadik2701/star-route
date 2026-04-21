@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Route Planner</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+<style>
+body { margin:0; font-family: Arial; }
+#map { width:100%; height:100vh; }
+.panel {
+ position:absolute; top:20px; right:20px;
+ background:white; padding:15px; border-radius:12px;
+ box-shadow:0 10px 30px rgba(0,0,0,0.2);
+ width:300px;
+}
+input { width:100%; padding:10px; margin-bottom:10px; }
+button { width:100%; padding:10px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="panel">
+<input id="token" placeholder="Mapbox token">
+<button onclick="initMap()">Запустити карту</button>
+</div>
+
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
