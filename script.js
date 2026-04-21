@@ -1,8 +1,17 @@
 mapboxgl.accessToken = "pk.eyJ1IjoidmFkaWtmYW5kaWNoIiwiYSI6ImNtbzh5a2U5bzA0c2YycXIweHFnenBxbjkifQ.VPmfULjpK3zz8VHXvY4LCg";
 
+const mapError = document.getElementById("mapError");
+function showMapError(text) {
+  mapError.textContent = text;
+  mapError.classList.remove("hidden");
+}
+function hideMapError() {
+  mapError.classList.add("hidden");
+}
+
 const map = new mapboxgl.Map({
   container: "map",
-  style: "mapbox://styles/mapbox/standard",
+  style: "mapbox://styles/mapbox/streets-v12",
   center: [24.03, 49.84],
   zoom: 9
 });
@@ -27,10 +36,18 @@ let mapLoaded = false;
 
 map.on("load", () => {
   mapLoaded = true;
-  console.log("Map loaded");
+  hideMapError();
   if (pendingRouteBuild) {
     pendingRouteBuild = false;
     buildRoadRoute();
+  }
+});
+
+map.on("error", (e) => {
+  const msg = e && e.error && e.error.message ? e.error.message : "";
+  console.error("Mapbox error:", e);
+  if (msg) {
+    showMapError("Карта не підвантажила стиль. Часто це через обмеження токена по домену або збій стилю. Я вже переключив на streets-v12. Якщо ще біло — треба дозволити цей домен у Mapbox token.");
   }
 });
 
