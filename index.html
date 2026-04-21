@@ -1,89 +1,52 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STAR Route Planner</title>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STAR Route Planner</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar left">
-      <div class="brand">
-        <div class="brand-kicker">Dispatch mode</div>
-        <h1>STAR Route Planner</h1>
-        <p>База → доставки → база. Логіка під водіїв і збереження маршрутів.</p>
-      </div>
+<div class="app-shell">
+<aside class="sidebar left">
+<div class="brand"><h1>STAR Route</h1></div>
 
-      <div class="panel">
-        <div class="panel-title">Новий маршрут</div>
-        <input id="routeNameInput" type="text" placeholder="Назва маршруту" class="mb10" />
-        <select id="driverSelect" class="select mb10"></select>
-        <button id="newRouteBtn" class="primary full">Створити маршрут</button>
-      </div>
+<div class="panel">
+<input id="routeNameInput" placeholder="Назва маршруту"/>
+<select id="driverSelect"></select>
+<button id="newRouteBtn">Створити маршрут</button>
+</div>
 
-      <div class="panel">
-        <div class="panel-title">Маршрути</div>
-        <div id="routesList" class="routes-list"></div>
-      </div>
-    </aside>
+<div id="routesList"></div>
+</aside>
 
-    <main class="map-wrap">
-      <div id="map"></div>
-      <div class="map-overlay">
-        <div class="overlay-title" id="activeRouteTitle">Маршрут</div>
-        <div class="overlay-sub" id="activeRouteMeta">База → доставки → база</div>
-      </div>
-      <div id="mapError" class="map-error hidden"></div>
-    </main>
+<main class="map-wrap">
+<div id="map"></div>
+</main>
 
-    <aside class="sidebar right">
-      <div class="panel">
-        <div class="panel-title">Домашня точка водія</div>
-        <div class="subnote">Для активного маршруту старт і фініш беруться з домашньої точки вибраного водія.</div>
-        <input id="homeInput" type="text" placeholder="Введи домашню точку водія" />
-        <div id="homeStatus" class="muted"></div>
-        <div id="homeSuggestions" class="suggestions"></div>
-        <button id="saveHomeBtn" class="full">Зберегти домашню точку</button>
-      </div>
+<aside class="sidebar right">
+<div class="panel">
+<input id="homeInput" placeholder="Домашня точка"/>
+<div id="homeSuggestions"></div>
+<button id="saveHomeBtn">Зберегти дім</button>
+</div>
 
-      <div class="panel">
-        <div class="panel-title">Додати адресу доставки</div>
-        <input id="addressInput" type="text" placeholder="Місто, вулиця, будинок" autocomplete="off" />
-        <div id="searchStatus" class="muted"></div>
-        <div id="suggestions" class="suggestions"></div>
-      </div>
+<div class="panel">
+<input id="addressInput" placeholder="Адреса"/>
+<div id="suggestions"></div>
+</div>
 
-      <div class="panel">
-        <div class="panel-title">Маршрут</div>
-        <div class="stats">
-          <div><span>Точок</span><strong id="stopCount">0</strong></div>
-          <div><span>Км</span><strong id="routeKm">0</strong></div>
-          <div><span>Час</span><strong id="routeTime">0 хв</strong></div>
-        </div>
-        <div class="actions">
-          <button id="optimizeBtn" class="primary">Оптимізувати</button>
-          <button id="routeBtn" class="primary">Побудувати по дорогах</button>
-        </div>
-        <div class="actions top10">
-          <button id="clearBtn">Очистити доставки</button>
-        </div>
-      </div>
+<div class="panel">
+<button id="optimizeBtn">Оптимізувати</button>
+<button id="routeBtn">Маршрут</button>
+</div>
 
-      <div class="panel">
-        <div class="panel-title">Точки маршруту</div>
-        <div id="stopsList" class="stops-list"></div>
-      </div>
+<div id="stopsList"></div>
+</aside>
+</div>
 
-      <div class="panel">
-        <div class="panel-title">Водії</div>
-        <div id="driversList" class="drivers-list"></div>
-      </div>
-    </aside>
-  </div>
-
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-  <script src="script.js"></script>
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
