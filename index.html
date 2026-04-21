@@ -13,15 +13,37 @@
       <div class="brand">
         <div class="brand-kicker">Dispatch mode</div>
         <h1>STAR Route Planner</h1>
-        <p>Маршрут по дорогах на Mapbox.</p>
+        <p>Маршрути, водії, автопідказки адрес і збереження.</p>
       </div>
 
       <div class="panel">
-        <div class="panel-title">Додати адресу</div>
-        <div class="search-row">
-          <input id="addressInput" type="text" placeholder="Місто, вулиця, будинок" autocomplete="off" />
-          <button id="searchBtn">Знайти</button>
+        <div class="panel-title">Новий маршрут</div>
+        <input id="routeNameInput" type="text" placeholder="Назва маршруту" class="mb10" />
+        <select id="driverSelect" class="select mb10"></select>
+        <div class="actions">
+          <button id="newRouteBtn" class="primary">Створити маршрут</button>
         </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Маршрути</div>
+        <div id="routesList" class="routes-list"></div>
+      </div>
+    </aside>
+
+    <main class="map-wrap">
+      <div id="map"></div>
+      <div class="map-overlay">
+        <div class="overlay-title" id="activeRouteTitle">Маршрут</div>
+        <div class="overlay-sub" id="activeRouteMeta">Mapbox Directions API</div>
+      </div>
+      <div id="mapError" class="map-error hidden"></div>
+    </main>
+
+    <aside class="sidebar right">
+      <div class="panel">
+        <div class="panel-title">Додати адресу</div>
+        <input id="addressInput" type="text" placeholder="Місто, вулиця, будинок" autocomplete="off" />
         <div id="searchStatus" class="muted"></div>
         <div id="suggestions" class="suggestions"></div>
       </div>
@@ -38,21 +60,15 @@
           <button id="clearBtn">Очистити</button>
         </div>
       </div>
-    </aside>
 
-    <main class="map-wrap">
-      <div id="map"></div>
-      <div class="map-overlay">
-        <div class="overlay-title">Road routing</div>
-        <div class="overlay-sub">Mapbox Directions API</div>
-      </div>
-      <div id="mapError" class="map-error hidden"></div>
-    </main>
-
-    <aside class="sidebar right">
       <div class="panel">
         <div class="panel-title">Точки маршруту</div>
         <div id="stopsList" class="stops-list"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Водії</div>
+        <div id="driversList" class="drivers-list"></div>
       </div>
     </aside>
   </div>
