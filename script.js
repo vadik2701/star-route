@@ -123,13 +123,24 @@ function renderDrivers() {
   homeInput.value = (driver && driver.home && driver.home.label) || "";
 }
 
-driversList.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-rename-driver]");
-  if (!btn) return;
-  renameDriverId = btn.dataset.renameDriver;
+function openRenameModal(driverId) {
+  renameDriverId = driverId;
   const driver = getDriver(renameDriverId);
   renameDriverInput.value = driver ? driver.name : "";
   renameModal.classList.remove("hidden");
+  setTimeout(() => renameDriverInput.focus(), 0);
+}
+
+function closeRenameModal() {
+  renameModal.classList.add("hidden");
+  renameDriverId = null;
+  renameDriverInput.value = "";
+}
+
+driversList.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-rename-driver]");
+  if (!btn) return;
+  openRenameModal(btn.dataset.renameDriver);
 });
 
 saveDriverNameBtn.addEventListener("click", () => {
@@ -139,13 +150,21 @@ saveDriverNameBtn.addEventListener("click", () => {
   if (driver) driver.name = value;
   saveState();
   renderAll();
-  renameModal.classList.add("hidden");
-  renameDriverId = null;
+  closeRenameModal();
 });
 
 cancelDriverNameBtn.addEventListener("click", () => {
-  renameModal.classList.add("hidden");
-  renameDriverId = null;
+  closeRenameModal();
+});
+
+renameModal.addEventListener("click", (e) => {
+  if (e.target === renameModal) closeRenameModal();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !renameModal.classList.contains("hidden")) {
+    closeRenameModal();
+  }
 });
 
 function renderRoutes() {
