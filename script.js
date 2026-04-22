@@ -128,11 +128,13 @@ function openRenameModal(driverId) {
   const driver = getDriver(renameDriverId);
   renameDriverInput.value = driver ? driver.name : "";
   renameModal.classList.remove("hidden");
+  renameModal.setAttribute("aria-hidden", "false");
   setTimeout(() => renameDriverInput.focus(), 0);
 }
 
 function closeRenameModal() {
   renameModal.classList.add("hidden");
+  renameModal.setAttribute("aria-hidden", "true");
   renameDriverId = null;
   renameDriverInput.value = "";
 }
@@ -153,9 +155,7 @@ saveDriverNameBtn.addEventListener("click", () => {
   closeRenameModal();
 });
 
-cancelDriverNameBtn.addEventListener("click", () => {
-  closeRenameModal();
-});
+cancelDriverNameBtn.addEventListener("click", closeRenameModal);
 
 renameModal.addEventListener("click", (e) => {
   if (e.target === renameModal) closeRenameModal();
