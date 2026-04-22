@@ -255,7 +255,7 @@ function ensureStopsLayer() {
       type: "circle",
       source: "delivery-points",
       paint: {
-        "circle-radius": 15,
+        "circle-radius": 16,
         "circle-color": [
           "case",
           ["==", ["get", "next"], 1],
@@ -531,6 +531,7 @@ shareRouteBtn.onclick = async () => {
 
 function clearRouteLayer() {
   if (map.getLayer("route-line")) map.removeLayer("route-line");
+  if (map.getLayer("route-line-bg")) map.removeLayer("route-line-bg");
   if (map.getSource("route")) map.removeSource("route");
   if (map.getLayer("delivery-labels")) map.removeLayer("delivery-labels");
   if (map.getLayer("delivery-circles")) map.removeLayer("delivery-circles");
@@ -742,13 +743,30 @@ async function buildRoadRoute() {
 
     if (!map.getSource("route")) {
       map.addSource("route", { type: "geojson", data: geojson });
+
+      map.addLayer({
+        id: "route-line-bg",
+        type: "line",
+        source: "route",
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 9,
+          "line-opacity": 0.95
+        },
+        layout: { "line-cap": "round", "line-join": "round" }
+      }, "delivery-circles");
+
       map.addLayer({
         id: "route-line",
         type: "line",
         source: "route",
-        paint: { "line-color": "#111827", "line-width": 5 },
+        paint: {
+          "line-color": "#111827",
+          "line-width": 5,
+          "line-opacity": 0.96
+        },
         layout: { "line-cap": "round", "line-join": "round" }
-      });
+      }, "delivery-circles");
     } else {
       map.getSource("route").setData(geojson);
     }
