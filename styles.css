@@ -21,7 +21,7 @@ input:focus,.select:focus{box-shadow:0 0 0 3px rgba(15,23,42,.08)}
 button{border:none;border-radius:16px;padding:14px 16px;background:#e2e8f0;cursor:pointer;font-weight:700;transition:transform .15s, opacity .2s, box-shadow .2s}
 button:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(15,23,42,.08)}
 button.primary{background:#0f172a;color:#fff}
-.ghost-btn{padding:10px 12px;border-radius:14px;background:#f1f5f9;font-size:12px}
+.ghost-btn,.floating-btn{padding:10px 12px;border-radius:14px;background:#f1f5f9;font-size:12px}
 .muted{font-size:13px;color:#64748b;margin-top:8px;min-height:18px}
 .subnote{font-size:12px;color:#64748b;margin-bottom:10px;line-height:1.4}
 .routes-list,.drivers-list,.suggestions,.stops-list{display:flex;flex-direction:column;gap:8px}
@@ -44,6 +44,8 @@ button.primary{background:#0f172a;color:#fff}
 .map-overlay{position:absolute;left:18px;top:18px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);padding:12px 14px;border-radius:18px;box-shadow:0 8px 20px rgba(15,23,42,.12);z-index:2}
 .overlay-title{font-size:18px;font-weight:800}
 .overlay-sub{font-size:12px;color:#64748b}
+.floating-actions{position:absolute;right:18px;top:18px;display:flex;gap:8px;z-index:2}
+.floating-btn.primary{background:#0f172a;color:#fff}
 .map-error{position:absolute;left:18px;bottom:18px;z-index:2;max-width:420px;background:rgba(127,29,29,.94);color:#fff;padding:12px 14px;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.15);font-size:13px;line-height:1.4}
 .hidden{display:none !important}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -53,6 +55,7 @@ button.primary{background:#0f172a;color:#fff}
 .status-row{display:grid;grid-template-columns:1fr}
 .stop-item{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:12px;animation:popIn .22s ease}
 .stop-item:hover{box-shadow:0 8px 18px rgba(15,23,42,.08)}
+.stop-item.dragging{opacity:.55;transform:scale(.99)}
 .stop-badge{width:34px;height:34px;border-radius:12px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:0 0 auto}
 .stop-badge.next{background:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.15)}
 .stop-main{min-width:0;flex:1}
@@ -62,9 +65,15 @@ button.primary{background:#0f172a;color:#fff}
 .stop-leg{font-size:12px;color:#475569;margin-top:2px}
 .stop-actions{display:flex;flex-direction:column;gap:6px}
 .icon-btn{padding:8px 10px;border-radius:12px;background:#f1f5f9;font-size:12px}
+.drag-note{font-size:12px;color:#64748b;font-weight:700}
 .modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:50}
 .modal-card{width:min(420px,92vw);background:#fff;border-radius:24px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+.toast{position:fixed;right:18px;bottom:18px;background:#0f172a;color:#fff;padding:12px 14px;border-radius:14px;box-shadow:0 16px 32px rgba(0,0,0,.2);z-index:60}
+.driver-mode .left,.driver-mode .right{display:none}
+.driver-mode .app-shell{grid-template-columns:1fr;padding:10px}
+.driver-mode .map-overlay{left:12px;top:12px}
+.driver-mode .floating-actions{right:12px;top:12px;flex-wrap:wrap;justify-content:flex-end;max-width:75vw}
 @keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media (max-width:1300px){.app-shell{grid-template-columns:320px 1fr}.sidebar.right{display:none}}
-@media (max-width:860px){body{overflow:auto}.app-shell{grid-template-columns:1fr;grid-template-rows:auto 55vh auto;height:auto}.map-wrap{order:2;min-height:55vh}}
+@media (max-width:860px){body{overflow:auto}.app-shell{grid-template-columns:1fr;grid-template-rows:auto 55vh auto;height:auto}.map-wrap{order:2;min-height:55vh}.floating-actions{flex-wrap:wrap;max-width:70vw}}

@@ -5,6 +5,7 @@ const STORAGE_KEY = "star-route-pro-v1";
 const defaultDrivers = Array.from({ length: 7 }, (_, i) => ({ id: `d${i+1}`, name: `Водій ${i+1}`, home: null }));
 const $ = (id) => document.getElementById(id);
 
+const appShell = $("appShell");
 const routesList = $("routesList");
 const driversList = $("driversList");
 const driverSelect = $("driverSelect");
@@ -38,6 +39,10 @@ const renameModal = $("renameModal");
 const renameDriverInput = $("renameDriverInput");
 const saveDriverNameBtn = $("saveDriverNameBtn");
 const cancelDriverNameBtn = $("cancelDriverNameBtn");
+const googleMapsBtn = $("googleMapsBtn");
+const shareRouteBtn = $("shareRouteBtn");
+const driverModeBtn = $("driverModeBtn");
+const shareToast = $("shareToast");
 
 let renameDriverId = null;
 let markers = [];
@@ -49,6 +54,8 @@ let pendingRouteBuild = false;
 let selectedHomeFeature = null;
 let routeLegDurations = [];
 let routeLegDistances = [];
+let isDriverMode = false;
+let dragIndex = null;
 
 const map = new mapboxgl.Map({
   container: "map",
@@ -91,6 +98,11 @@ function showMapError(text) {
 }
 function hideMapError() {
   mapError.classList.add("hidden");
+}
+function showToast(text) {
+  shareToast.textContent = text;
+  shareToast.classList.remove("hidden");
+  setTimeout(() => shareToast.classList.add("hidden"), 1800);
 }
 
 function escapeHtml(text) {
@@ -172,11 +184,10 @@ function renderRoutes() {
   routesList.innerHTML = filtered.map(r => {
     const driver = getDriver(r.driverId);
     const active = r.id === state.activeRouteId ? "active" : "";
-    const homeSet = driver && driver.home ? "дім ок" : "нема дому";
     return `
       <div class="route-item ${active}" data-route-id="${r.id}">
         <div><strong>${escapeHtml(r.name)}</strong></div>
-        <div class="route-item-meta">Водій: ${escapeHtml(driver ? driver.name : "—")} · Доставок: ${r.deliveries.length} · Старт: ${r.startTime || "09:00"} · Статус: ${r.status || "Заплановано"} · ${homeSet}</div>
+        <div class="route-item-meta">Водій: ${escapeHtml(driver ? driver.name : "—")} · Доставок: ${r.deliveries.length} · Старт: ${r.startTime || "09:00"} · Статус: ${r.status || "Заплановано"}</div>
       </div>
     `;
   }).join("");
@@ -190,7 +201,7 @@ function renderStops() {
   stopCount.textContent = deliveries.length;
 
   stopsList.innerHTML = deliveries.map((stop, index) => `
-    <div class="stop-item">
+    <div class="stop-item" draggable="true" data-drag-index="${index}">
       <div class="stop-badge ${index === 0 ? "next" : ""}">${index + 1}</div>
       <div class="stop-main">
         <div class="stop-label">${escapeHtml(stop.label)}</div>
@@ -259,6 +270,7 @@ function renderAll() {
   startTimeInput.value = getActiveRoute().startTime || "09:00";
   routeStatusSelect.value = getActiveRoute().status || "Заплановано";
   if (getOrderedStops(getActiveRoute()).length < 2) setRouteStats();
+  driverModeBtn.textContent = isDriverMode ? "Вийти з режиму водія" : "Режим водія";
 }
 
 map.on("load", () => {
@@ -332,6 +344,39 @@ routeStatusSelect.onchange = () => {
   renderAll();
 };
 
+stopsList.addEventListener("dragstart", (e) => {
+  const item = e.target.closest("[data-drag-index]");
+  if (!item) return;
+  dragIndex = Number(item.dataset.dragIndex);
+  item.classList.add("dragging");
+});
+
+stopsList.addEventListener("dragend", (e) => {
+  const item = e.target.closest("[data-drag-index]");
+  if (item) item.classList.remove("dragging");
+});
+
+stopsList.addEventListener("dragover", (e) => {
+  e.preventDefault();
+});
+
+stopsList.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const item = e.target.closest("[data-drag-index]");
+  if (!item || dragIndex === null) return;
+  const dropIndex = Number(item.dataset.dragIndex);
+  if (dropIndex === dragIndex) return;
+  const route = getActiveRoute();
+  const moved = route.deliveries.splice(dragIndex, 1)[0];
+  route.deliveries.splice(dropIndex, 0, moved);
+  dragIndex = null;
+  routeLegDurations = [];
+  routeLegDistances = [];
+  saveState();
+  renderAll();
+  if (getOrderedStops(route).length >= 2) buildRoadRoute();
+});
+
 stopsList.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-action]");
   if (!btn) return;
@@ -375,6 +420,53 @@ deleteRouteBtn.onclick = () => {
   renderAll();
   clearRouteLayer();
   if (getOrderedStops(getActiveRoute()).length >= 2) buildRoadRoute();
+};
+
+driverModeBtn.onclick = () => {
+  isDriverMode = !isDriverMode;
+  document.body.classList.toggle("driver-mode", isDriverMode);
+  renderAll();
+  setTimeout(() => map.resize(), 250);
+};
+
+function getGoogleMapsLink() {
+  const ordered = getOrderedStops(getActiveRoute());
+  if (!ordered.length) return "";
+  const origin = `${ordered[0].lat},${ordered[0].lng}`;
+  const destination = `${ordered[ordered.length - 1].lat},${ordered[ordered.length - 1].lng}`;
+  const waypoints = ordered.slice(1, -1).map(s => `${s.lat},${s.lng}`).join("|");
+  const url = new URL("https://www.google.com/maps/dir/");
+  url.searchParams.set("api", "1");
+  url.searchParams.set("origin", origin);
+  url.searchParams.set("destination", destination);
+  if (waypoints) url.searchParams.set("waypoints", waypoints);
+  url.searchParams.set("travelmode", "driving");
+  return url.toString();
+}
+
+googleMapsBtn.onclick = () => {
+  const link = getGoogleMapsLink();
+  if (!link) return alert("Спочатку створи маршрут");
+  window.open(link, "_blank");
+};
+
+shareRouteBtn.onclick = async () => {
+  const route = getActiveRoute();
+  const driver = getDriver(route.driverId);
+  const text = [
+    `Маршрут: ${route.name}`,
+    `Водій: ${driver ? driver.name : "—"}`,
+    `Статус: ${route.status || "Заплановано"}`,
+    `Старт: ${route.startTime || "09:00"}`,
+    `Доставок: ${route.deliveries.length}`,
+    `Google Maps: ${getGoogleMapsLink()}`
+  ].join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Посилання і дані маршруту скопійовано");
+  } catch {
+    showToast("Не вдалося скопіювати");
+  }
 };
 
 function clearRouteLayer() {
@@ -504,7 +596,7 @@ async function optimizeDeliveries() {
   if (route.deliveries.length < 2) return alert("Для оптимізації треба хоча б 2 доставки");
 
   const coords = [driver.home, ...route.deliveries].map(s => `${s.lng},${s.lat}`).join(";");
-  const url = `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coords}?annotations=duration&access_token=${mapboxgl.accessToken}`;
+  const url = `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coords}?annotations=duration,distance&access_token=${mapboxgl.accessToken}`;
 
   try {
     const res = await fetch(url);
@@ -530,8 +622,30 @@ async function optimizeDeliveries() {
       orderedIdx.push(picked - 1);
       current = picked;
     }
-
-    route.deliveries = orderedIdx.map(i => deliveries[i]);
+    // small 2-opt improvement
+    function routeCost(order) {
+      let total = 0, prev = 0;
+      order.forEach(i => { total += durations[prev][i + 1] || 0; prev = i + 1; });
+      total += durations[prev][0] || 0;
+      return total;
+    }
+    let improved = orderedIdx.slice();
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let i = 0; i < improved.length - 1; i++) {
+        for (let j = i + 1; j < improved.length; j++) {
+          const candidate = improved.slice();
+          const segment = candidate.slice(i, j + 1).reverse();
+          candidate.splice(i, j - i + 1, ...segment);
+          if (routeCost(candidate) + 1 < routeCost(improved)) {
+            improved = candidate;
+            changed = true;
+          }
+        }
+      }
+    }
+    route.deliveries = improved.map(i => deliveries[i]);
     routeLegDurations = [];
     routeLegDistances = [];
     saveState();

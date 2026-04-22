@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STAR Route Planner Pro</title>
+  <title>STAR Route Planner Pro+</title>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar left">
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar left" id="leftSidebar">
       <div class="brand card dark">
         <div class="eyebrow">DISPATCH MODE</div>
         <h1>STAR Route Planner</h1>
@@ -40,10 +40,15 @@
         <div class="overlay-title" id="activeRouteTitle">Маршрут</div>
         <div class="overlay-sub" id="activeRouteMeta">Mapbox Directions API</div>
       </div>
+      <div class="floating-actions">
+        <button id="googleMapsBtn" class="floating-btn" type="button">Google Maps</button>
+        <button id="shareRouteBtn" class="floating-btn" type="button">Поділитись</button>
+        <button id="driverModeBtn" class="floating-btn primary" type="button">Режим водія</button>
+      </div>
       <div id="mapError" class="map-error hidden"></div>
     </main>
 
-    <aside class="sidebar right">
+    <aside class="sidebar right" id="rightSidebar">
       <div class="right-scroll">
         <div class="card">
           <div class="section-title">Домашня точка водія</div>
@@ -91,7 +96,10 @@
         </div>
 
         <div class="card">
-          <div class="section-title">Точки маршруту</div>
+          <div class="toolbar-row">
+            <div class="section-title no-margin">Точки маршруту</div>
+            <div class="drag-note">drag & drop</div>
+          </div>
           <div id="stopsList" class="stops-list"></div>
         </div>
 
@@ -113,6 +121,8 @@
       </div>
     </div>
   </div>
+
+  <div id="shareToast" class="toast hidden">Посилання скопійовано</div>
 
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <script src="script.js"></script>
