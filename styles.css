@@ -1,36 +1,41 @@
-
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;font-family:Inter,Arial,sans-serif;background:#f4f7fb;color:#111827}
-.app-shell{display:grid;grid-template-columns:330px 1fr 400px;height:100vh;gap:16px;padding:16px}
-.sidebar{display:flex;flex-direction:column;gap:16px;overflow:auto}
+.app-shell{display:grid;grid-template-columns:330px 1fr 410px;height:100vh;gap:16px;padding:16px}
+.sidebar{display:flex;flex-direction:column;gap:16px;min-height:0}
+.left{overflow:auto}
+.right{min-height:0}
+.right-scroll{display:flex;flex-direction:column;gap:16px;overflow:auto;padding-right:4px}
 .brand{background:#0b1220;color:#fff;border-radius:24px;padding:20px;box-shadow:0 12px 30px rgba(15,23,42,.18)}
 .brand-kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#94a3b8}
 .brand h1{margin:8px 0 6px;font-size:34px;line-height:1.05}
 .brand p{margin:0;color:#cbd5e1}
 .panel{background:#fff;border-radius:24px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.08)}
-.panel-title{font-size:18px;font-weight:700;margin-bottom:12px}
+.panel-title{font-size:18px;font-weight:700;margin:0 0 12px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 input,.select{width:100%;padding:14px 16px;border:none;border-radius:16px;background:#f1f5f9;font-size:15px}
-.mb10{margin-bottom:10px}
-.top10{margin-top:10px}
-.full{width:100%}
+.mb10{margin-bottom:10px}.top10{margin-top:10px}.full{width:100%}
 .actions{display:flex;gap:10px}
 button{border:none;border-radius:16px;padding:14px 16px;background:#e2e8f0;cursor:pointer;font-weight:700}
 button.primary{background:#0f172a;color:#fff}
 button:hover{opacity:.95}
+.ghost-btn{padding:10px 12px;border-radius:14px;background:#f1f5f9;font-size:12px}
 .muted{font-size:13px;color:#64748b;margin-top:8px;min-height:18px}
 .subnote{font-size:12px;color:#64748b;margin-bottom:10px;line-height:1.4}
 .routes-list,.drivers-list,.suggestions,.stops-list{display:flex;flex-direction:column;gap:8px}
 .route-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:12px;cursor:pointer}
 .route-item.active{background:#0f172a;color:#fff;border-color:#0f172a}
-.route-item-meta{font-size:12px;color:#64748b;margin-top:4px}
+.route-item-meta{font-size:12px;color:#64748b;margin-top:4px;line-height:1.35}
 .route-item.active .route-item-meta{color:#cbd5e1}
 .driver-chip{display:flex;justify-content:space-between;align-items:flex-start;background:#f8fafc;border-radius:16px;padding:12px;gap:12px}
+.driver-left{min-width:0}
+.driver-name{font-weight:700}
 .driver-meta{font-size:12px;color:#64748b;margin-top:4px;line-height:1.35}
+.small-btn{padding:8px 10px;border-radius:12px;background:#e2e8f0;font-size:12px}
 .suggestion{background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:12px;cursor:pointer}
 .suggestion:hover{background:#eef2f7}
 .suggestion-title{font-weight:600;font-size:14px}
 .suggestion-meta{font-size:12px;color:#64748b;margin-top:4px}
-.map-wrap{position:relative;border-radius:28px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,.12)}
+.map-wrap{position:relative;border-radius:28px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,.12);min-height:0}
 #map{width:100%;height:100%}
 .map-overlay{position:absolute;left:18px;top:18px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);padding:12px 14px;border-radius:18px;box-shadow:0 8px 20px rgba(15,23,42,.12);z-index:2}
 .overlay-title{font-size:18px;font-weight:800}
@@ -48,5 +53,7 @@ button:hover{opacity:.95}
 .stop-coords{font-size:12px;color:#64748b;margin-top:4px}
 .stop-actions{display:flex;flex-direction:column;gap:6px}
 .icon-btn{padding:8px 10px;border-radius:12px;background:#f1f5f9;font-size:12px}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal-card{width:min(420px,92vw);background:#fff;border-radius:24px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
 @media (max-width:1300px){.app-shell{grid-template-columns:320px 1fr}.sidebar.right{display:none}}
 @media (max-width:860px){.app-shell{grid-template-columns:1fr;grid-template-rows:auto 55vh auto}.map-wrap{order:2;min-height:55vh}}
