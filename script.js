@@ -45,7 +45,6 @@ const driverModeBtn = $("driverModeBtn");
 const shareToast = $("shareToast");
 
 let renameDriverId = null;
-let markers = [];
 let homeMarker = null;
 let searchTimer = null;
 let homeTimer = null;
@@ -217,32 +216,93 @@ function renderStops() {
     </div>
   `).join("");
   drawMarkers();
+  if (mapLoaded) ensureStopsLayer();
+}
+
+
+function getStopsGeoJSON() {
+  const route = getActiveRoute();
+  return {
+    type: "FeatureCollection",
+    features: route.deliveries.map((stop, index) => ({
+      type: "Feature",
+      properties: {
+        idx: index + 1,
+        next: index === 0 ? 1 : 0
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [stop.lng, stop.lat]
+      }
+    }))
+  };
+}
+
+function ensureStopsLayer() {
+  if (!mapLoaded) return;
+  const data = getStopsGeoJSON();
+
+  if (map.getSource("delivery-points")) {
+    map.getSource("delivery-points").setData(data);
+  } else {
+    map.addSource("delivery-points", {
+      type: "geojson",
+      data
+    });
+
+    map.addLayer({
+      id: "delivery-circles",
+      type: "circle",
+      source: "delivery-points",
+      paint: {
+        "circle-radius": 15,
+        "circle-color": [
+          "case",
+          ["==", ["get", "next"], 1],
+          "#2563eb",
+          "#0f172a"
+        ],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 3,
+        "circle-opacity": 1
+      }
+    });
+
+    map.addLayer({
+      id: "delivery-labels",
+      type: "symbol",
+      source: "delivery-points",
+      layout: {
+        "text-field": ["to-string", ["get", "idx"]],
+        "text-size": 12,
+        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"]
+      },
+      paint: {
+        "text-color": "#ffffff"
+      }
+    });
+  }
 }
 
 function drawMarkers() {
-  markers.forEach(m => m.remove());
-  markers = [];
   if (homeMarker) {
     homeMarker.remove();
     homeMarker = null;
   }
+
   const route = getActiveRoute();
   const driver = getDriver(route.driverId);
+
   if (driver && driver.home) {
     const homeEl = document.createElement("div");
     homeEl.textContent = "🏠";
     homeEl.style.cssText = "font-size:24px;line-height:1;";
     homeMarker = new mapboxgl.Marker(homeEl).setLngLat([driver.home.lng, driver.home.lat]).addTo(map);
   }
-  route.deliveries.forEach((stop, index) => {
-    const el = document.createElement("div");
-    const bg = index === 0 ? "#2563eb" : "#0f172a";
-    const shadow = index === 0 ? "0 0 0 6px rgba(37,99,235,.18), 0 6px 18px rgba(0,0,0,.18)" : "0 6px 18px rgba(0,0,0,.18)";
-    el.style.cssText = `width:30px;height:30px;border-radius:999px;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;border:3px solid #fff;box-shadow:${shadow};font-size:12px;transition:transform .2s;`;
-    el.textContent = index + 1;
-    markers.push(new mapboxgl.Marker(el).setLngLat([stop.lng, stop.lat]).addTo(map));
-  });
+
+  ensureStopsLayer();
 }
+
 
 function setRouteStats(distanceMeters = 0, durationSeconds = 0) {
   routeKm.textContent = distanceMeters ? (distanceMeters / 1000).toFixed(1) : "0";
@@ -472,6 +532,9 @@ shareRouteBtn.onclick = async () => {
 function clearRouteLayer() {
   if (map.getLayer("route-line")) map.removeLayer("route-line");
   if (map.getSource("route")) map.removeSource("route");
+  if (map.getLayer("delivery-labels")) map.removeLayer("delivery-labels");
+  if (map.getLayer("delivery-circles")) map.removeLayer("delivery-circles");
+  if (map.getSource("delivery-points")) map.removeSource("delivery-points");
 }
 
 async function geocode(query) {
@@ -695,6 +758,7 @@ async function buildRoadRoute() {
     map.fitBounds(bounds, { padding: 60 });
     setRouteStats(r.distance, r.duration);
     renderStops();
+    ensureStopsLayer();
   } catch (e) {
     console.error(e);
     searchStatus.textContent = "Не вдалось побудувати маршрут";
