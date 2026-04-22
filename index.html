@@ -3,36 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STAR Route Planner</title>
+  <title>STAR Route Planner Pro</title>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar left">
-      <div class="brand">
-        <div class="brand-kicker">DISPATCH MODE</div>
+      <div class="brand card dark">
+        <div class="eyebrow">DISPATCH MODE</div>
         <h1>STAR Route Planner</h1>
         <p>Дім → доставки → дім</p>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">Новий маршрут</div>
+      <div class="card">
+        <div class="section-title">Новий маршрут</div>
         <input id="routeNameInput" type="text" placeholder="Назва маршруту" class="mb10" />
         <select id="driverSelect" class="select mb10"></select>
+        <input id="startTimeInput" type="time" value="09:00" class="mb10" />
         <button id="newRouteBtn" class="primary full" type="button">Створити маршрут</button>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">Маршрути</div>
+      <div class="card">
+        <div class="toolbar-row">
+          <div class="section-title no-margin">Маршрути</div>
           <button id="deleteRouteBtn" class="ghost-btn" type="button">Видалити</button>
         </div>
+        <select id="routeFilterDriver" class="select mb10"></select>
         <div id="routesList" class="routes-list"></div>
       </div>
     </aside>
 
-    <main class="map-wrap">
+    <main class="map-wrap card">
       <div id="map"></div>
       <div class="map-overlay">
         <div class="overlay-title" id="activeRouteTitle">Маршрут</div>
@@ -43,8 +45,8 @@
 
     <aside class="sidebar right">
       <div class="right-scroll">
-        <div class="panel">
-          <div class="panel-title">Домашня точка водія</div>
+        <div class="card">
+          <div class="section-title">Домашня точка водія</div>
           <div class="subnote">Дім використовується як старт і фініш, але не входить у нумерацію доставок.</div>
           <input id="homeInput" type="text" placeholder="Введи домашню точку" />
           <div id="homeStatus" class="muted"></div>
@@ -52,19 +54,32 @@
           <button id="saveHomeBtn" class="full top10" type="button">Зберегти дім</button>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">Додати доставку</div>
+        <div class="card">
+          <div class="section-title">Додати доставку</div>
           <input id="addressInput" type="text" placeholder="Місто, вулиця, будинок" autocomplete="off" />
           <div id="searchStatus" class="muted"></div>
           <div id="suggestions" class="suggestions"></div>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">Маршрут</div>
-          <div class="stats">
+        <div class="card">
+          <div class="section-title">Логіка роботи водія</div>
+          <div class="status-row">
+            <label class="mini-label">Статус маршруту</label>
+            <select id="routeStatusSelect" class="select">
+              <option value="Заплановано">Заплановано</option>
+              <option value="В дорозі">В дорозі</option>
+              <option value="Завершено">Завершено</option>
+            </select>
+          </div>
+          <div class="stats top10">
             <div><span>Доставок</span><strong id="stopCount">0</strong></div>
             <div><span>Км</span><strong id="routeKm">0</strong></div>
             <div><span>Час</span><strong id="routeTime">0 хв</strong></div>
+          </div>
+          <div class="stats top10">
+            <div><span>Виїзд</span><strong id="departureTimeLabel">09:00</strong></div>
+            <div><span>Фініш</span><strong id="finishTimeLabel">--:--</strong></div>
+            <div><span>Робота</span><strong id="workTimeLabel">0 хв</strong></div>
           </div>
           <div class="actions top10">
             <button id="optimizeBtn" class="primary" type="button">Оптимізувати</button>
@@ -75,13 +90,13 @@
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">Точки маршруту</div>
+        <div class="card">
+          <div class="section-title">Точки маршруту</div>
           <div id="stopsList" class="stops-list"></div>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">Водії</div>
+        <div class="card">
+          <div class="section-title">Водії</div>
           <div id="driversList" class="drivers-list"></div>
         </div>
       </div>
@@ -90,7 +105,7 @@
 
   <div id="renameModal" class="modal hidden">
     <div class="modal-card">
-      <div class="panel-title">Перейменувати водія</div>
+      <div class="section-title">Перейменувати водія</div>
       <input id="renameDriverInput" type="text" placeholder="Нова назва водія" />
       <div class="actions top10">
         <button id="saveDriverNameBtn" class="primary full" type="button">Зберегти</button>

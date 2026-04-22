@@ -1,14 +1,14 @@
 
 mapboxgl.accessToken = "pk.eyJ1IjoidmFkaWtmYW5kaWNoIiwiYSI6ImNtbzh5a2U5bzA0c2YycXIweHFnenBxbjkifQ.VPmfULjpK3zz8VHXvY4LCg";
 
-const STORAGE_KEY = "star-route-clean-working-v1";
+const STORAGE_KEY = "star-route-pro-v1";
 const defaultDrivers = Array.from({ length: 7 }, (_, i) => ({ id: `d${i+1}`, name: `Водій ${i+1}`, home: null }));
-
 const $ = (id) => document.getElementById(id);
 
 const routesList = $("routesList");
 const driversList = $("driversList");
 const driverSelect = $("driverSelect");
+const routeFilterDriver = $("routeFilterDriver");
 const routeNameInput = $("routeNameInput");
 const newRouteBtn = $("newRouteBtn");
 const deleteRouteBtn = $("deleteRouteBtn");
@@ -22,10 +22,15 @@ const saveHomeBtn = $("saveHomeBtn");
 const optimizeBtn = $("optimizeBtn");
 const routeBtn = $("routeBtn");
 const clearBtn = $("clearBtn");
+const startTimeInput = $("startTimeInput");
+const routeStatusSelect = $("routeStatusSelect");
 const stopsList = $("stopsList");
 const stopCount = $("stopCount");
 const routeKm = $("routeKm");
 const routeTime = $("routeTime");
+const departureTimeLabel = $("departureTimeLabel");
+const finishTimeLabel = $("finishTimeLabel");
+const workTimeLabel = $("workTimeLabel");
 const activeRouteTitle = $("activeRouteTitle");
 const activeRouteMeta = $("activeRouteMeta");
 const mapError = $("mapError");
@@ -42,6 +47,8 @@ let homeTimer = null;
 let mapLoaded = false;
 let pendingRouteBuild = false;
 let selectedHomeFeature = null;
+let routeLegDurations = [];
+let routeLegDistances = [];
 
 const map = new mapboxgl.Map({
   container: "map",
@@ -54,7 +61,8 @@ map.addControl(new mapboxgl.NavigationControl(), "top-right");
 const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
 let state = stored || {
   drivers: defaultDrivers,
-  routes: [{ id: "r1", name: "Львів 24.04", driverId: "d1", deliveries: [] }],
+  routeFilterDriverId: "all",
+  routes: [{ id: "r1", name: "Львів 24.04", driverId: "d1", deliveries: [], startTime: "09:00", status: "Заплановано" }],
   activeRouteId: "r1"
 };
 
@@ -89,6 +97,40 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
+function parseTimeToMinutes(str) {
+  const [h, m] = (str || "09:00").split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function formatMinutes(mins) {
+  const total = ((mins % (24*60)) + (24*60)) % (24*60);
+  const h = Math.floor(total / 60).toString().padStart(2, "0");
+  const m = Math.floor(total % 60).toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function getArrivalTimes(route) {
+  const deliveries = route.deliveries || [];
+  const startMinutes = parseTimeToMinutes(route.startTime || "09:00");
+  let current = startMinutes;
+  const result = [];
+  for (let i = 0; i < deliveries.length; i++) {
+    const legSeconds = routeLegDurations[i] || 0;
+    current += Math.round(legSeconds / 60);
+    result.push(formatMinutes(current));
+  }
+  return result;
+}
+
+function getLegTexts(route) {
+  const deliveries = route.deliveries || [];
+  return deliveries.map((_, i) => {
+    const km = routeLegDistances[i] ? (routeLegDistances[i] / 1000).toFixed(1) : "0.0";
+    const mins = routeLegDurations[i] ? Math.round(routeLegDurations[i] / 60) : 0;
+    return `${km} км · ${mins} хв від попередньої точки`;
+  });
+}
+
 function openRenameModal(driverId) {
   renameDriverId = driverId;
   const driver = getDriver(driverId);
@@ -105,6 +147,9 @@ function closeRenameModal() {
 
 function renderDrivers() {
   driverSelect.innerHTML = state.drivers.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join("");
+  routeFilterDriver.innerHTML = `<option value="all">Усі водії</option>` + state.drivers.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join("");
+  routeFilterDriver.value = state.routeFilterDriverId || "all";
+
   const activeRoute = getActiveRoute();
   driverSelect.value = activeRoute.driverId;
   driversList.innerHTML = state.drivers.map(d => `
@@ -121,28 +166,37 @@ function renderDrivers() {
 }
 
 function renderRoutes() {
-  routesList.innerHTML = state.routes.map(r => {
+  const filterDriverId = state.routeFilterDriverId || "all";
+  const filtered = filterDriverId === "all" ? state.routes : state.routes.filter(r => r.driverId === filterDriverId);
+
+  routesList.innerHTML = filtered.map(r => {
     const driver = getDriver(r.driverId);
     const active = r.id === state.activeRouteId ? "active" : "";
     const homeSet = driver && driver.home ? "дім ок" : "нема дому";
     return `
       <div class="route-item ${active}" data-route-id="${r.id}">
         <div><strong>${escapeHtml(r.name)}</strong></div>
-        <div class="route-item-meta">Водій: ${escapeHtml(driver ? driver.name : "—")} · Доставок: ${r.deliveries.length} · ${homeSet}</div>
+        <div class="route-item-meta">Водій: ${escapeHtml(driver ? driver.name : "—")} · Доставок: ${r.deliveries.length} · Старт: ${r.startTime || "09:00"} · Статус: ${r.status || "Заплановано"} · ${homeSet}</div>
       </div>
     `;
   }).join("");
 }
 
 function renderStops() {
-  const deliveries = getActiveRoute().deliveries || [];
+  const route = getActiveRoute();
+  const deliveries = route.deliveries || [];
+  const etaList = getArrivalTimes(route);
+  const legTexts = getLegTexts(route);
   stopCount.textContent = deliveries.length;
+
   stopsList.innerHTML = deliveries.map((stop, index) => `
     <div class="stop-item">
-      <div class="stop-badge">${index + 1}</div>
+      <div class="stop-badge ${index === 0 ? "next" : ""}">${index + 1}</div>
       <div class="stop-main">
         <div class="stop-label">${escapeHtml(stop.label)}</div>
         <div class="stop-coords">Доставка · ${stop.lng.toFixed(5)}, ${stop.lat.toFixed(5)}</div>
+        <div class="stop-eta">Прибуття: ${etaList[index] || "--:--"}${index === 0 ? " · наступна точка" : ""}</div>
+        <div class="stop-leg">${legTexts[index] || ""}</div>
       </div>
       <div class="stop-actions">
         <button class="icon-btn" type="button" data-action="up" data-index="${index}">↑</button>
@@ -171,7 +225,9 @@ function drawMarkers() {
   }
   route.deliveries.forEach((stop, index) => {
     const el = document.createElement("div");
-    el.style.cssText = "width:30px;height:30px;border-radius:999px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.18);font-size:12px;";
+    const bg = index === 0 ? "#2563eb" : "#0f172a";
+    const shadow = index === 0 ? "0 0 0 6px rgba(37,99,235,.18), 0 6px 18px rgba(0,0,0,.18)" : "0 6px 18px rgba(0,0,0,.18)";
+    el.style.cssText = `width:30px;height:30px;border-radius:999px;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;border:3px solid #fff;box-shadow:${shadow};font-size:12px;transition:transform .2s;`;
     el.textContent = index + 1;
     markers.push(new mapboxgl.Marker(el).setLngLat([stop.lng, stop.lat]).addTo(map));
   });
@@ -180,13 +236,19 @@ function drawMarkers() {
 function setRouteStats(distanceMeters = 0, durationSeconds = 0) {
   routeKm.textContent = distanceMeters ? (distanceMeters / 1000).toFixed(1) : "0";
   routeTime.textContent = durationSeconds ? Math.round(durationSeconds / 60) + " хв" : "0 хв";
+  const route = getActiveRoute();
+  const departure = route.startTime || "09:00";
+  departureTimeLabel.textContent = departure;
+  const finishMinutes = parseTimeToMinutes(departure) + Math.round((durationSeconds || 0) / 60);
+  finishTimeLabel.textContent = durationSeconds ? formatMinutes(finishMinutes) : "--:--";
+  workTimeLabel.textContent = durationSeconds ? Math.round(durationSeconds / 60) + " хв" : "0 хв";
 }
 
 function renderHeader() {
   const route = getActiveRoute();
   const driver = getDriver(route.driverId);
   activeRouteTitle.textContent = route.name;
-  activeRouteMeta.textContent = `Водій: ${driver ? driver.name : "—"} · ${driver && driver.home ? "Дім задано" : "Задай дім"} · Дім → доставки → дім`;
+  activeRouteMeta.textContent = `Водій: ${driver ? driver.name : "—"} · Старт: ${route.startTime || "09:00"} · Статус: ${route.status || "Заплановано"} · Дім → доставки → дім`;
 }
 
 function renderAll() {
@@ -194,6 +256,8 @@ function renderAll() {
   renderRoutes();
   renderStops();
   renderHeader();
+  startTimeInput.value = getActiveRoute().startTime || "09:00";
+  routeStatusSelect.value = getActiveRoute().status || "Заплановано";
   if (getOrderedStops(getActiveRoute()).length < 2) setRouteStats();
 }
 
@@ -223,34 +287,49 @@ saveDriverNameBtn.onclick = () => {
   renderAll();
   closeRenameModal();
 };
+cancelDriverNameBtn.onclick = closeRenameModal;
+renameModal.onclick = (e) => { if (e.target === renameModal) closeRenameModal(); };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !renameModal.classList.contains("hidden")) closeRenameModal(); });
 
-cancelDriverNameBtn.onclick = () => closeRenameModal();
-
-renameModal.onclick = (e) => {
-  if (e.target === renameModal) closeRenameModal();
+routeFilterDriver.onchange = () => {
+  state.routeFilterDriverId = routeFilterDriver.value;
+  saveState();
+  renderRoutes();
 };
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !renameModal.classList.contains("hidden")) closeRenameModal();
-});
 
 routesList.addEventListener("click", (e) => {
   const item = e.target.closest("[data-route-id]");
   if (!item) return;
   state.activeRouteId = item.dataset.routeId;
+  routeLegDurations = [];
+  routeLegDistances = [];
   saveState();
   renderAll();
   if (getOrderedStops(getActiveRoute()).length >= 2) buildRoadRoute();
-  else clearRouteLayer();
 });
 
 driverSelect.onchange = () => {
   const route = getActiveRoute();
   route.driverId = driverSelect.value;
+  routeLegDurations = [];
+  routeLegDistances = [];
   saveState();
   renderAll();
   if (getOrderedStops(route).length >= 2) buildRoadRoute();
-  else clearRouteLayer();
+};
+
+startTimeInput.onchange = () => {
+  const route = getActiveRoute();
+  route.startTime = startTimeInput.value || "09:00";
+  saveState();
+  renderAll();
+};
+
+routeStatusSelect.onchange = () => {
+  const route = getActiveRoute();
+  route.status = routeStatusSelect.value;
+  saveState();
+  renderAll();
 };
 
 stopsList.addEventListener("click", (e) => {
@@ -263,6 +342,8 @@ stopsList.addEventListener("click", (e) => {
   if (action === "remove") deliveries.splice(index, 1);
   else if (action === "up" && index > 0) [deliveries[index - 1], deliveries[index]] = [deliveries[index], deliveries[index - 1]];
   else if (action === "down" && index < deliveries.length - 1) [deliveries[index + 1], deliveries[index]] = [deliveries[index], deliveries[index + 1]];
+  routeLegDurations = [];
+  routeLegDistances = [];
   saveState();
   renderAll();
   if (getOrderedStops(route).length >= 2) buildRoadRoute();
@@ -273,8 +354,10 @@ newRouteBtn.onclick = () => {
   const driverId = driverSelect.value;
   if (!name) return alert("Введи назву маршруту");
   const id = "r" + Date.now();
-  state.routes.unshift({ id, name, driverId, deliveries: [] });
+  state.routes.unshift({ id, name, driverId, deliveries: [], startTime: startTimeInput.value || "09:00", status: "Заплановано" });
   state.activeRouteId = id;
+  routeLegDurations = [];
+  routeLegDistances = [];
   routeNameInput.value = "";
   saveState();
   renderAll();
@@ -286,6 +369,8 @@ deleteRouteBtn.onclick = () => {
   if (state.routes.length <= 1) return alert("Останній маршрут видаляти не можна");
   state.routes = state.routes.filter(r => r.id !== state.activeRouteId);
   state.activeRouteId = state.routes[0].id;
+  routeLegDurations = [];
+  routeLegDistances = [];
   saveState();
   renderAll();
   clearRouteLayer();
@@ -344,6 +429,8 @@ suggestionsEl.onclick = (e) => {
   const feature = features[Number(el.dataset.index)];
   if (!feature) return;
   getActiveRoute().deliveries.push(feature);
+  routeLegDurations = [];
+  routeLegDistances = [];
   addressInput.value = "";
   suggestionsEl.innerHTML = "";
   searchStatus.textContent = "";
@@ -403,6 +490,8 @@ saveHomeBtn.onclick = () => {
   if (!selectedHomeFeature && !homeInput.value.trim()) return alert("Вкажи домашню точку");
   if (selectedHomeFeature) driver.home = selectedHomeFeature;
   else if (!(driver && driver.home && homeInput.value.trim() === driver.home.label)) return alert("Вибери домашню точку зі списку");
+  routeLegDurations = [];
+  routeLegDistances = [];
   saveState();
   renderAll();
   if (getOrderedStops(getActiveRoute()).length >= 2) buildRoadRoute();
@@ -441,7 +530,10 @@ async function optimizeDeliveries() {
       orderedIdx.push(picked - 1);
       current = picked;
     }
+
     route.deliveries = orderedIdx.map(i => deliveries[i]);
+    routeLegDurations = [];
+    routeLegDistances = [];
     saveState();
     renderAll();
     buildRoadRoute();
@@ -461,13 +553,16 @@ async function buildRoadRoute() {
     return;
   }
   const coords = ordered.map(s => `${s.lng},${s.lat}`).join(";");
-  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&overview=full&access_token=${mapboxgl.accessToken}`;
+  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&overview=full&steps=true&access_token=${mapboxgl.accessToken}`;
   try {
     const res = await fetch(url);
     const data = await res.json();
     if (!data.routes || !data.routes.length) return alert("Маршрут не знайдено");
     const r = data.routes[0];
     const geojson = { type: "Feature", geometry: r.geometry };
+    routeLegDurations = (r.legs || []).map(leg => leg.duration || 0);
+    routeLegDistances = (r.legs || []).map(leg => leg.distance || 0);
+
     if (!map.getSource("route")) {
       map.addSource("route", { type: "geojson", data: geojson });
       map.addLayer({
@@ -480,10 +575,12 @@ async function buildRoadRoute() {
     } else {
       map.getSource("route").setData(geojson);
     }
+
     const bounds = new mapboxgl.LngLatBounds();
     r.geometry.coordinates.forEach(c => bounds.extend(c));
     map.fitBounds(bounds, { padding: 60 });
     setRouteStats(r.distance, r.duration);
+    renderStops();
   } catch (e) {
     console.error(e);
     searchStatus.textContent = "Не вдалось побудувати маршрут";
@@ -494,6 +591,8 @@ routeBtn.onclick = buildRoadRoute;
 
 clearBtn.onclick = () => {
   getActiveRoute().deliveries = [];
+  routeLegDurations = [];
+  routeLegDistances = [];
   saveState();
   renderAll();
   setRouteStats();
