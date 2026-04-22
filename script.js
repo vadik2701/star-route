@@ -1,40 +1,38 @@
 
 mapboxgl.accessToken = "pk.eyJ1IjoidmFkaWtmYW5kaWNoIiwiYSI6ImNtbzh5a2U5bzA0c2YycXIweHFnenBxbjkifQ.VPmfULjpK3zz8VHXvY4LCg";
 
-const STORAGE_KEY = "star-route-planner-v5";
-const defaultDrivers = Array.from({ length: 7 }, (_, i) => ({
-  id: `d${i + 1}`,
-  name: `Водій ${i + 1}`,
-  home: null
-}));
+const STORAGE_KEY = "star-route-clean-working-v1";
+const defaultDrivers = Array.from({ length: 7 }, (_, i) => ({ id: `d${i+1}`, name: `Водій ${i+1}`, home: null }));
 
-const routesList = document.getElementById("routesList");
-const driversList = document.getElementById("driversList");
-const driverSelect = document.getElementById("driverSelect");
-const routeNameInput = document.getElementById("routeNameInput");
-const newRouteBtn = document.getElementById("newRouteBtn");
-const deleteRouteBtn = document.getElementById("deleteRouteBtn");
-const addressInput = document.getElementById("addressInput");
-const suggestionsEl = document.getElementById("suggestions");
-const searchStatus = document.getElementById("searchStatus");
-const homeInput = document.getElementById("homeInput");
-const homeSuggestions = document.getElementById("homeSuggestions");
-const homeStatus = document.getElementById("homeStatus");
-const saveHomeBtn = document.getElementById("saveHomeBtn");
-const optimizeBtn = document.getElementById("optimizeBtn");
-const routeBtn = document.getElementById("routeBtn");
-const clearBtn = document.getElementById("clearBtn");
-const stopsList = document.getElementById("stopsList");
-const stopCount = document.getElementById("stopCount");
-const routeKm = document.getElementById("routeKm");
-const routeTime = document.getElementById("routeTime");
-const activeRouteTitle = document.getElementById("activeRouteTitle");
-const activeRouteMeta = document.getElementById("activeRouteMeta");
-const mapError = document.getElementById("mapError");
-const renameModal = document.getElementById("renameModal");
-const renameDriverInput = document.getElementById("renameDriverInput");
-const saveDriverNameBtn = document.getElementById("saveDriverNameBtn");
-const cancelDriverNameBtn = document.getElementById("cancelDriverNameBtn");
+const $ = (id) => document.getElementById(id);
+
+const routesList = $("routesList");
+const driversList = $("driversList");
+const driverSelect = $("driverSelect");
+const routeNameInput = $("routeNameInput");
+const newRouteBtn = $("newRouteBtn");
+const deleteRouteBtn = $("deleteRouteBtn");
+const addressInput = $("addressInput");
+const suggestionsEl = $("suggestions");
+const searchStatus = $("searchStatus");
+const homeInput = $("homeInput");
+const homeSuggestions = $("homeSuggestions");
+const homeStatus = $("homeStatus");
+const saveHomeBtn = $("saveHomeBtn");
+const optimizeBtn = $("optimizeBtn");
+const routeBtn = $("routeBtn");
+const clearBtn = $("clearBtn");
+const stopsList = $("stopsList");
+const stopCount = $("stopCount");
+const routeKm = $("routeKm");
+const routeTime = $("routeTime");
+const activeRouteTitle = $("activeRouteTitle");
+const activeRouteMeta = $("activeRouteMeta");
+const mapError = $("mapError");
+const renameModal = $("renameModal");
+const renameDriverInput = $("renameDriverInput");
+const saveDriverNameBtn = $("saveDriverNameBtn");
+const cancelDriverNameBtn = $("cancelDriverNameBtn");
 
 let renameDriverId = null;
 let markers = [];
@@ -76,8 +74,7 @@ function getOrderedStops(route) {
   const driver = getDriver(route.driverId);
   const home = driver && driver.home;
   const deliveries = route.deliveries || [];
-  if (!home) return deliveries;
-  return [home, ...deliveries, home];
+  return home ? [home, ...deliveries, home] : deliveries;
 }
 
 function showMapError(text) {
@@ -88,26 +85,26 @@ function hideMapError() {
   mapError.classList.add("hidden");
 }
 
-map.on("load", () => {
-  mapLoaded = true;
-  hideMapError();
-  renderAll();
-  if (pendingRouteBuild) {
-    pendingRouteBuild = false;
-    buildRoadRoute();
-  }
-});
-
-map.on("error", () => {
-  showMapError("Карта не підвантажила стиль або домен токена не дозволений.");
-});
-
 function escapeHtml(text) {
   return String(text).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
+function openRenameModal(driverId) {
+  renameDriverId = driverId;
+  const driver = getDriver(driverId);
+  renameDriverInput.value = driver ? driver.name : "";
+  renameModal.classList.remove("hidden");
+  setTimeout(() => renameDriverInput.focus(), 0);
+}
+
+function closeRenameModal() {
+  renameModal.classList.add("hidden");
+  renameDriverId = null;
+  renameDriverInput.value = "";
+}
+
 function renderDrivers() {
-  driverSelect.innerHTML = state.drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join("");
+  driverSelect.innerHTML = state.drivers.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join("");
   const activeRoute = getActiveRoute();
   driverSelect.value = activeRoute.driverId;
   driversList.innerHTML = state.drivers.map(d => `
@@ -116,56 +113,12 @@ function renderDrivers() {
         <div class="driver-name">${escapeHtml(d.name)}</div>
         <div class="driver-meta">${d.home ? escapeHtml(d.home.label) : "Домашня точка не задана"}</div>
       </div>
-      <button class="small-btn" data-rename-driver="${d.id}">Назва</button>
+      <button class="small-btn" type="button" data-rename-driver="${d.id}">Назва</button>
     </div>
   `).join("");
   const driver = getDriver(activeRoute.driverId);
   homeInput.value = (driver && driver.home && driver.home.label) || "";
 }
-
-function openRenameModal(driverId) {
-  renameDriverId = driverId;
-  const driver = getDriver(renameDriverId);
-  renameDriverInput.value = driver ? driver.name : "";
-  renameModal.classList.remove("hidden");
-  renameModal.setAttribute("aria-hidden", "false");
-  setTimeout(() => renameDriverInput.focus(), 0);
-}
-
-function closeRenameModal() {
-  renameModal.classList.add("hidden");
-  renameModal.setAttribute("aria-hidden", "true");
-  renameDriverId = null;
-  renameDriverInput.value = "";
-}
-
-driversList.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-rename-driver]");
-  if (!btn) return;
-  openRenameModal(btn.dataset.renameDriver);
-});
-
-saveDriverNameBtn.addEventListener("click", () => {
-  const value = renameDriverInput.value.trim();
-  if (!renameDriverId || !value) return;
-  const driver = getDriver(renameDriverId);
-  if (driver) driver.name = value;
-  saveState();
-  renderAll();
-  closeRenameModal();
-});
-
-cancelDriverNameBtn.addEventListener("click", closeRenameModal);
-
-renameModal.addEventListener("click", (e) => {
-  if (e.target === renameModal) closeRenameModal();
-});
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !renameModal.classList.contains("hidden")) {
-    closeRenameModal();
-  }
-});
 
 function renderRoutes() {
   routesList.innerHTML = state.routes.map(r => {
@@ -181,28 +134,8 @@ function renderRoutes() {
   }).join("");
 }
 
-routesList.addEventListener("click", (e) => {
-  const item = e.target.closest("[data-route-id]");
-  if (!item) return;
-  state.activeRouteId = item.dataset.routeId;
-  saveState();
-  renderAll();
-  if (getOrderedStops(getActiveRoute()).length >= 2) buildRoadRoute();
-  else clearRouteLayer();
-});
-
-driverSelect.addEventListener("change", () => {
-  const route = getActiveRoute();
-  route.driverId = driverSelect.value;
-  saveState();
-  renderAll();
-  if (getOrderedStops(route).length >= 2) buildRoadRoute();
-  else clearRouteLayer();
-});
-
 function renderStops() {
-  const route = getActiveRoute();
-  const deliveries = route.deliveries || [];
+  const deliveries = getActiveRoute().deliveries || [];
   stopCount.textContent = deliveries.length;
   stopsList.innerHTML = deliveries.map((stop, index) => `
     <div class="stop-item">
@@ -212,29 +145,14 @@ function renderStops() {
         <div class="stop-coords">Доставка · ${stop.lng.toFixed(5)}, ${stop.lat.toFixed(5)}</div>
       </div>
       <div class="stop-actions">
-        <button class="icon-btn" data-action="up" data-index="${index}">↑</button>
-        <button class="icon-btn" data-action="down" data-index="${index}">↓</button>
-        <button class="icon-btn" data-action="remove" data-index="${index}">✕</button>
+        <button class="icon-btn" type="button" data-action="up" data-index="${index}">↑</button>
+        <button class="icon-btn" type="button" data-action="down" data-index="${index}">↓</button>
+        <button class="icon-btn" type="button" data-action="remove" data-index="${index}">✕</button>
       </div>
     </div>
   `).join("");
   drawMarkers();
 }
-
-stopsList.addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-action]");
-  if (!btn) return;
-  const route = getActiveRoute();
-  const deliveries = route.deliveries;
-  const index = Number(btn.dataset.index);
-  const action = btn.dataset.action;
-  if (action === "remove") deliveries.splice(index, 1);
-  else if (action === "up" && index > 0) [deliveries[index - 1], deliveries[index]] = [deliveries[index], deliveries[index - 1]];
-  else if (action === "down" && index < deliveries.length - 1) [deliveries[index + 1], deliveries[index]] = [deliveries[index], deliveries[index + 1]];
-  saveState();
-  renderAll();
-  if (getOrderedStops(route).length >= 2) buildRoadRoute();
-});
 
 function drawMarkers() {
   markers.forEach(m => m.remove());
@@ -245,14 +163,12 @@ function drawMarkers() {
   }
   const route = getActiveRoute();
   const driver = getDriver(route.driverId);
-
   if (driver && driver.home) {
     const homeEl = document.createElement("div");
     homeEl.textContent = "🏠";
     homeEl.style.cssText = "font-size:24px;line-height:1;";
     homeMarker = new mapboxgl.Marker(homeEl).setLngLat([driver.home.lng, driver.home.lat]).addTo(map);
   }
-
   route.deliveries.forEach((stop, index) => {
     const el = document.createElement("div");
     el.style.cssText = "width:30px;height:30px;border-radius:999px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.18);font-size:12px;";
@@ -281,7 +197,78 @@ function renderAll() {
   if (getOrderedStops(getActiveRoute()).length < 2) setRouteStats();
 }
 
-newRouteBtn.addEventListener("click", () => {
+map.on("load", () => {
+  mapLoaded = true;
+  hideMapError();
+  renderAll();
+  if (pendingRouteBuild) {
+    pendingRouteBuild = false;
+    buildRoadRoute();
+  }
+});
+map.on("error", () => showMapError("Карта не підвантажила стиль або домен токена не дозволений."));
+
+driversList.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-rename-driver]");
+  if (!btn) return;
+  openRenameModal(btn.dataset.renameDriver);
+});
+
+saveDriverNameBtn.onclick = () => {
+  const value = renameDriverInput.value.trim();
+  if (!renameDriverId || !value) return;
+  const driver = getDriver(renameDriverId);
+  if (driver) driver.name = value;
+  saveState();
+  renderAll();
+  closeRenameModal();
+};
+
+cancelDriverNameBtn.onclick = () => closeRenameModal();
+
+renameModal.onclick = (e) => {
+  if (e.target === renameModal) closeRenameModal();
+};
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !renameModal.classList.contains("hidden")) closeRenameModal();
+});
+
+routesList.addEventListener("click", (e) => {
+  const item = e.target.closest("[data-route-id]");
+  if (!item) return;
+  state.activeRouteId = item.dataset.routeId;
+  saveState();
+  renderAll();
+  if (getOrderedStops(getActiveRoute()).length >= 2) buildRoadRoute();
+  else clearRouteLayer();
+});
+
+driverSelect.onchange = () => {
+  const route = getActiveRoute();
+  route.driverId = driverSelect.value;
+  saveState();
+  renderAll();
+  if (getOrderedStops(route).length >= 2) buildRoadRoute();
+  else clearRouteLayer();
+};
+
+stopsList.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const route = getActiveRoute();
+  const deliveries = route.deliveries;
+  const index = Number(btn.dataset.index);
+  const action = btn.dataset.action;
+  if (action === "remove") deliveries.splice(index, 1);
+  else if (action === "up" && index > 0) [deliveries[index - 1], deliveries[index]] = [deliveries[index], deliveries[index - 1]];
+  else if (action === "down" && index < deliveries.length - 1) [deliveries[index + 1], deliveries[index]] = [deliveries[index], deliveries[index + 1]];
+  saveState();
+  renderAll();
+  if (getOrderedStops(route).length >= 2) buildRoadRoute();
+});
+
+newRouteBtn.onclick = () => {
   const name = routeNameInput.value.trim();
   const driverId = driverSelect.value;
   if (!name) return alert("Введи назву маршруту");
@@ -293,18 +280,17 @@ newRouteBtn.addEventListener("click", () => {
   renderAll();
   clearRouteLayer();
   map.flyTo({ center: [24.03, 49.84], zoom: 9 });
-});
+};
 
-deleteRouteBtn.addEventListener("click", () => {
+deleteRouteBtn.onclick = () => {
   if (state.routes.length <= 1) return alert("Останній маршрут видаляти не можна");
-  const currentId = state.activeRouteId;
-  state.routes = state.routes.filter(r => r.id !== currentId);
+  state.routes = state.routes.filter(r => r.id !== state.activeRouteId);
   state.activeRouteId = state.routes[0].id;
   saveState();
   renderAll();
   clearRouteLayer();
   if (getOrderedStops(getActiveRoute()).length >= 2) buildRoadRoute();
-});
+};
 
 function clearRouteLayer() {
   if (map.getLayer("route-line")) map.removeLayer("route-line");
@@ -346,12 +332,12 @@ async function searchAddress() {
   }
 }
 
-addressInput.addEventListener("input", () => {
+addressInput.oninput = () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(searchAddress, 350);
-});
+};
 
-suggestionsEl.addEventListener("click", (e) => {
+suggestionsEl.onclick = (e) => {
   const el = e.target.closest(".suggestion");
   if (!el) return;
   const features = JSON.parse(suggestionsEl.dataset.features || "[]");
@@ -365,7 +351,7 @@ suggestionsEl.addEventListener("click", (e) => {
   renderAll();
   map.flyTo({ center: [feature.lng, feature.lat], zoom: 12 });
   if (getOrderedStops(getActiveRoute()).length >= 2) buildRoadRoute();
-});
+};
 
 async function searchHome() {
   const query = homeInput.value.trim();
@@ -395,13 +381,13 @@ async function searchHome() {
   }
 }
 
-homeInput.addEventListener("input", () => {
+homeInput.oninput = () => {
   selectedHomeFeature = null;
   clearTimeout(homeTimer);
   homeTimer = setTimeout(searchHome, 350);
-});
+};
 
-homeSuggestions.addEventListener("click", (e) => {
+homeSuggestions.onclick = (e) => {
   const el = e.target.closest(".suggestion");
   if (!el) return;
   const features = JSON.parse(homeSuggestions.dataset.features || "[]");
@@ -410,9 +396,9 @@ homeSuggestions.addEventListener("click", (e) => {
   homeInput.value = selectedHomeFeature.label;
   homeSuggestions.innerHTML = "";
   homeStatus.textContent = "Домашню точку вибрано";
-});
+};
 
-saveHomeBtn.addEventListener("click", () => {
+saveHomeBtn.onclick = () => {
   const driver = getDriver(getActiveRoute().driverId);
   if (!selectedHomeFeature && !homeInput.value.trim()) return alert("Вкажи домашню точку");
   if (selectedHomeFeature) driver.home = selectedHomeFeature;
@@ -420,7 +406,7 @@ saveHomeBtn.addEventListener("click", () => {
   saveState();
   renderAll();
   if (getOrderedStops(getActiveRoute()).length >= 2) buildRoadRoute();
-});
+};
 
 async function optimizeDeliveries() {
   const route = getActiveRoute();
@@ -438,8 +424,7 @@ async function optimizeDeliveries() {
     if (!durations) return alert("Не вдалось оптимізувати");
 
     const deliveries = route.deliveries.slice();
-    const n = deliveries.length;
-    let remaining = Array.from({ length: n }, (_, i) => i + 1);
+    let remaining = Array.from({ length: deliveries.length }, (_, i) => i + 1);
     let orderedIdx = [];
     let current = 0;
     while (remaining.length) {
@@ -456,36 +441,7 @@ async function optimizeDeliveries() {
       orderedIdx.push(picked - 1);
       current = picked;
     }
-
-    function routeCost(idxOrder) {
-      let total = 0;
-      let prev = 0;
-      idxOrder.forEach(i => {
-        total += durations[prev][i + 1] || 0;
-        prev = i + 1;
-      });
-      total += durations[prev][0] || 0;
-      return total;
-    }
-
-    let improved = orderedIdx.slice();
-    let improvedFlag = true;
-    while (improvedFlag) {
-      improvedFlag = false;
-      for (let i = 0; i < improved.length - 1; i++) {
-        for (let j = i + 1; j < improved.length; j++) {
-          const candidate = improved.slice();
-          const segment = candidate.slice(i, j + 1).reverse();
-          candidate.splice(i, j - i + 1, ...segment);
-          if (routeCost(candidate) + 1 < routeCost(improved)) {
-            improved = candidate;
-            improvedFlag = true;
-          }
-        }
-      }
-    }
-
-    route.deliveries = improved.map(i => deliveries[i]);
+    route.deliveries = orderedIdx.map(i => deliveries[i]);
     saveState();
     renderAll();
     buildRoadRoute();
@@ -495,7 +451,7 @@ async function optimizeDeliveries() {
   }
 }
 
-optimizeBtn.addEventListener("click", optimizeDeliveries);
+optimizeBtn.onclick = optimizeDeliveries;
 
 async function buildRoadRoute() {
   const ordered = getOrderedStops(getActiveRoute());
@@ -534,9 +490,9 @@ async function buildRoadRoute() {
   }
 }
 
-routeBtn.addEventListener("click", buildRoadRoute);
+routeBtn.onclick = buildRoadRoute;
 
-clearBtn.addEventListener("click", () => {
+clearBtn.onclick = () => {
   getActiveRoute().deliveries = [];
   saveState();
   renderAll();
@@ -548,6 +504,6 @@ clearBtn.addEventListener("click", () => {
   const driver = getDriver(getActiveRoute().driverId);
   if (driver && driver.home) map.flyTo({ center: [driver.home.lng, driver.home.lat], zoom: 10 });
   else map.flyTo({ center: [24.03, 49.84], zoom: 9 });
-});
+};
 
 renderAll();
